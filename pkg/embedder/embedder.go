@@ -1,7 +1,7 @@
 package embedder
 
 /*
-#cgo LDFLAGS: -L${SRCDIR}/../../embed_anything_binding/target/debug -lembed_anything_binding -framework CoreFoundation -framework Security -lc++ -framework Metal -framework MetalKit -framework Foundation -framework MetalPerformanceShaders
+#cgo LDFLAGS: -L${SRCDIR}/../../embed_anything_binding/target/debug -lembed_anything_binding
 #include <stdlib.h>
 
 typedef struct {

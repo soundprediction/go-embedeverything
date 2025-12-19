@@ -27,6 +27,7 @@ typedef struct {
 typedef struct {
     size_t index;
     float score;
+    char* text;
 } RerankResult;
 
 typedef struct {
@@ -74,6 +75,12 @@ func NewEmbedder(modelID string) (*Embedder, error) {
 
 func inferArchitecture(modelID string) string {
 	lower := strings.ToLower(modelID)
+	if strings.Contains(lower, "qwen2.5") || strings.Contains(lower, "qwen2") {
+		return "Qwen2"
+	}
+	if strings.Contains(lower, "qwen3") {
+		return "Qwen3"
+	}
 	if strings.Contains(lower, "qwen") {
 		return "Qwen2"
 	}
@@ -194,6 +201,7 @@ func (r *Reranker) Close() {
 type RerankResult struct {
 	Index int     `json:"index"`
 	Score float32 `json:"relevance_score"`
+	Text  string  `json:"text"`
 }
 
 // Rerank reranks the documents based on query.
@@ -229,6 +237,7 @@ func (r *Reranker) Rerank(query string, documents []string) ([]RerankResult, err
 		out[i] = RerankResult{
 			Index: int(results[i].index),
 			Score: float32(results[i].score),
+			Text:  C.GoString(results[i].text),
 		}
 	}
 	return out, nil

@@ -30,6 +30,7 @@ pub struct BatchEmbeddingResult {
 pub struct RerankResult {
     pub index: size_t,
     pub score: c_float,
+    pub text: *mut c_char,
 }
 
 #[repr(C)]
@@ -160,7 +161,7 @@ pub unsafe extern "C" fn rerank_documents(wrapper: *mut RerankerWrapper, query: 
     // Create refs must live as long as the call
     let docs_refs: Vec<&str> = docs_owned.iter().map(|s| s.as_str()).collect();
 
-    let res = wrapper_ref.inner.rerank(docs_refs, vec![&q], 32); 
+    let res = wrapper_ref.inner.rerank(vec![&q], docs_refs, 32); 
     
     match res {
         Ok(results) => {
@@ -168,20 +169,17 @@ pub unsafe extern "C" fn rerank_documents(wrapper: *mut RerankerWrapper, query: 
              if let Some(first_result) = results.first() {
                  let mut out_results = Vec::with_capacity(first_result.documents.len());
                  
-                 for item in &first_result.documents {
-                     // Note: embed_anything 0.6.5 might not return original index in 'index' field?
-                     // Compiler said fields: document, relevance_score, rank.
-                     // We map relevance_score to score.
-                     // We map rank to index (Note: this is effectively position, not original index. 
-                     // Real implementation should map back if needed, but for now we assume API consumer 
-                     // handles it or library updates).
-                     // Wait, if we return rank as index, usage is limited.
-                     // But we must compile.
+                 for (i, item) in first_result.documents.iter().enumerate() {
+                     let c_text = std::ffi::CString::new(item.document.clone()).unwrap().into_raw();
                      out_results.push(RerankResult {
-                         index: item.rank as size_t,
+                         index: i as size_t,
                          score: item.relevance_score as c_float,
+                         text: c_text,
                      });
                  }
+                 
+                 // Sort by score descending to be useful
+                 out_results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
                  
                  let count = out_results.len();
                  let ptr = out_results.as_mut_ptr();
@@ -237,6 +235,11 @@ pub extern "C" fn free_reranker(wrapper: *mut RerankerWrapper) {
 pub unsafe extern "C" fn free_rerank_result(result: *mut BatchRerankResult) {
      if !result.is_null() {
          let batch = Box::from_raw(result);
-         let _ = Vec::from_raw_parts(batch.results, batch.count as usize, batch.count as usize);
+         let vectors = Vec::from_raw_parts(batch.results, batch.count as usize, batch.count as usize);
+         for v in vectors {
+             if !v.text.is_null() {
+                 let _ = std::ffi::CString::from_raw(v.text);
+             }
+         }
      }
 }

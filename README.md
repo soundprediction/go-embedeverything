@@ -14,14 +14,14 @@ Golang bindings for [EmbedAnything](https://github.com/StarlightSearch/EmbedAnyt
 ### 1. Run the Server
 
 ```bash
-# Downloads the default Qwen3-0.6B embedding model and Jina-v1-Turbo reranker
+# Downloads the default Qwen3-0.6B embedding model and Qwen3-Reranker-0.6B-ONNX reranker
 go run main.go serve
 ```
 
 Custom configuration:
 
 ```bash
-go run main.go serve --model "Qwen/Qwen3-Embedding-0.6B" --rerank-model "jinaai/jina-reranker-v1-turbo-en" --port 9090
+go run main.go serve --model "Qwen/Qwen3-Embedding-0.6B" --rerank-model "zhiqing/Qwen3-Reranker-0.6B-ONNX" --port 9090
 ```
 
 ### 2. Generate Embeddings (OpenAI Compatible)
@@ -41,7 +41,7 @@ curl -X POST http://localhost:8080/v1/embeddings \
 curl -X POST http://localhost:8080/v1/rerank \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "jinaai/jina-reranker-v1-turbo-en",
+    "model": "zhiqing/Qwen3-Reranker-0.6B-ONNX",
     "query": "What is the capital of France?",
     "documents": ["Berlin", "Paris", "London", "Madrid"]
   }'
@@ -78,7 +78,7 @@ func main() {
     fmt.Printf("Generated %d vectors\n", len(vectors))
 
     // Initialize reranker
-    r, err := embedder.NewReranker("jinaai/jina-reranker-v1-turbo-en")
+    r, err := embedder.NewReranker("zhiqing/Qwen3-Reranker-0.6B-ONNX")
     if err != nil {
         log.Fatalf("Failed to create reranker: %v", err)
     }

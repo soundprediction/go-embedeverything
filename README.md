@@ -102,4 +102,4 @@ func main() {
 
 - **Go**: 1.20+
 - **Rust**: Latest stable (with `cargo`)
-- **macOS (Apple Silicon)**: Optimized with `metal` feature.
+- **Operating System**: macOS (Apple Silicon) or Linux (AMD64)

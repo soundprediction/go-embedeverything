@@ -4,13 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/soundprediction/go-embedeverything/pkg/embedder"
 	"github.com/spf13/cobra"
 )
+
+var logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 var (
 	modelID       string
@@ -125,7 +129,9 @@ func startServer() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			logger.Error("Failed to encode response", "error", err)
+		}
 	})
 
 	r.Post("/v1/rerank", func(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +170,9 @@ func startServer() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			logger.Error("Failed to encode response", "error", err)
+		}
 	})
 
 	addr := fmt.Sprintf(":%d", port)

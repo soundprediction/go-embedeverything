@@ -1,0 +1,125 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-rust:
+    name: Build Rust Library (${{ matrix.os }} - ${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            arch: universal
+            target_dir: darwin
+          - os: ubuntu-latest
+            arch: x86_64
+            target_dir: linux-amd64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            target_dir: linux-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Build Rust (macOS Universal)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd embed_anything_binding
+          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
+          mkdir -p ../pkg/embedder/lib/darwin
+          lipo -create \
+            target/aarch64-apple-darwin/release/libembed_anything_binding.a \
+            target/x86_64-apple-darwin/release/libembed_anything_binding.a \
+            -output ../pkg/embedder/lib/darwin/libembed_anything_binding.a
+
+      - name: Build Rust (Linux)
+        if: matrix.os != 'macos-latest'
+        run: |
+          cd embed_anything_binding
+          cargo build --release
+          mkdir -p ../pkg/embedder/lib/${{ matrix.target_dir }}
+          cp target/release/libembed_anything_binding.a ../pkg/embedder/lib/${{ matrix.target_dir }}/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lib-${{ matrix.target_dir }}
+          path: pkg/embedder/lib/${{ matrix.target_dir }}/libembed_anything_binding.a
+
+  test-go:
+    name: Test Go (${{ matrix.os }})
+    needs: build-rust
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target_dir: darwin
+          - os: ubuntu-latest
+            target_dir: linux-amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Download Rust Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-${{ matrix.target_dir }}
+          path: pkg/embedder/lib/${{ matrix.target_dir }}
+
+      - name: Run Go Tests
+        run: |
+          # Ensure link paths are correct for testing
+          # The CGO flags in the code already point to the correct relative paths
+          go test -v ./pkg/embedder/...
+
+  release:
+    name: Create Release
+    needs: build-rust
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir assets
+          # macOS
+          mv artifacts/lib-darwin/libembed_anything_binding.a assets/libembed_anything_binding-darwin-universal.a
+          # Linux AMD64
+          mv artifacts/lib-linux-amd64/libembed_anything_binding.a assets/libembed_anything_binding-linux-x86_64.a
+          # Linux ARM64
+          mv artifacts/lib-linux-arm64/libembed_anything_binding.a assets/libembed_anything_binding-linux-aarch64.a
+          
+          # Create tarballs for each
+          cd assets
+          for f in *.a; do
+            tar -czvf "${f%.a}.tar.gz" "$f"
+          done
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: assets/*.tar.gz

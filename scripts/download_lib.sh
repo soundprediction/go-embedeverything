@@ -21,18 +21,18 @@ case $OS in
     Darwin)
         GOOS="darwin"
         PLATFORM="darwin"
-        ASSET_NAME="libembed_anything_binding-darwin-universal.a" # Example
+        ASSET_NAME="libembed_anything_binding-darwin-universal.tar.gz"
         ;;
     Linux)
         GOOS="linux"
         case $ARCH in
             x86_64)
                 PLATFORM="linux-amd64"
-                ASSET_NAME="libembed_anything_binding-linux-x86_64.a"
+                ASSET_NAME="libembed_anything_binding-linux-x86_64.tar.gz"
                 ;;
             aarch64|arm64)
                 PLATFORM="linux-arm64"
-                ASSET_NAME="libembed_anything_binding-linux-aarch64.a"
+                ASSET_NAME="libembed_anything_binding-linux-aarch64.tar.gz"
                 ;;
             *)
                 echo "Unsupported architecture: $ARCH"
@@ -52,18 +52,29 @@ mkdir -p "$TARGET_DIR"
 echo "🔍 Detected platform: $PLATFORM"
 echo "📦 This would download $ASSET_NAME from $REPO"
 
-# Note: This is a template. The user should update the download logic
-# once they have a release pipeline.
-
-# Example download logic:
-# DOWNLOAD_URL="https://github.com/$REPO/releases/download/$VERSION/$ASSET_NAME"
-# curl -L -o "$TARGET_DIR/libembed_anything_binding.a" "$DOWNLOAD_URL"
-
-# For now, we will just check if the library exists locally, 
-# and if not, suggest running the compile script.
-
+# Check if library exists. If not, try to download or suggest compilation.
 if [ ! -f "$TARGET_DIR/libembed_anything_binding.a" ]; then
     echo "⚠️  Library not found in $TARGET_DIR"
+    
+    # Try to download if version is set (not just template)
+    if [ "$VERSION" != "template" ]; then
+        echo "🌐 Attempting to download pre-compiled binary ($ASSET_NAME)..."
+        DOWNLOAD_URL="https://github.com/$REPO/releases/download/$VERSION/$ASSET_NAME"
+        
+        # Temporary file for the tarball
+        TEMP_TAR=$(mktemp)
+        
+        if command -v curl >/dev/null 2>&1; then
+            if curl -L -f -o "$TEMP_TAR" "$DOWNLOAD_URL"; then
+                tar -xzf "$TEMP_TAR" -C "$TARGET_DIR" --strip-components=0
+                echo "✅ Downloaded and extracted library."
+                rm "$TEMP_TAR"
+                exit 0
+            fi
+        fi
+        rm "$TEMP_TAR"
+    fi
+
     if [ "$OS" = "Darwin" ]; then
         echo "💡 You can compile it locally by running: ./scripts/compile_rust_mac.sh"
     else

@@ -1,5 +1,7 @@
 package embedder
 
+//go:generate sh ../../scripts/download_lib.sh
+
 /*
 #cgo LDFLAGS: -L${SRCDIR}/../../embed_anything_binding/target/debug -lembed_anything_binding -lm
 #include <stdlib.h>

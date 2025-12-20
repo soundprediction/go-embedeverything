@@ -20,6 +20,7 @@ go.work
 # Rust
 target/
 **/*.rs.bk
+pkg/embedder/lib/
 
 # OS X
 .DS_Store

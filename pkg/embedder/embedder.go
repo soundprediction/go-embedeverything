@@ -1,7 +1,7 @@
 package embedder
 
 /*
-#cgo LDFLAGS: -L${SRCDIR}/../../embed_anything_binding/target/debug -lembed_anything_binding
+#cgo LDFLAGS: -L${SRCDIR}/../../embed_anything_binding/target/debug -lembed_anything_binding -lm
 #include <stdlib.h>
 
 typedef struct {

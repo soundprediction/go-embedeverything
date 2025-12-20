@@ -52,6 +52,14 @@ jobs:
           mkdir -p ../pkg/embedder/lib/${{ matrix.target_dir }}
           cp target/release/libembed_anything_binding.a ../pkg/embedder/lib/${{ matrix.target_dir }}/
 
+          # Download ONNX Runtime
+          ORT_VERSION=1.23.2
+          curl -L https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz \
+            | tar xz
+
+          cp onnxruntime-linux-x64-${ORT_VERSION}/lib/libonnxruntime.so \
+             ../pkg/embedder/lib/${{ matrix.target_dir }}/
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:

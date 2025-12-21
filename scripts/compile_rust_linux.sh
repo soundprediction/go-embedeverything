@@ -41,6 +41,19 @@ cargo build --release
 # Copy the static library
 cp target/release/libembed_anything_binding.a "$TARGET_DIR/"
 # Copy ONNX Runtime shared library
-find target -name "libonnxruntime.so*" -exec cp {} "$TARGET_DIR/" \;
+# Download and copy ONNX Runtime shared library
+ORT_VERSION="1.19.2"
+ORT_ARCH="x64"
+if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    ORT_ARCH="aarch64"
+fi
+
+echo "⬇️  Downloading ONNX Runtime v$ORT_VERSION..."
+curl -L "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}.tgz" \
+| tar xz
+
+# Copy to target dir (including symlinks)
+cp -P onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}/lib/libonnxruntime.so* "$TARGET_DIR/"
+rm -rf onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}
 
 echo "✅ Library compiled and copied to $TARGET_DIR"

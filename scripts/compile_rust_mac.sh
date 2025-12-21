@@ -42,7 +42,7 @@ if command -v lipo >/dev/null 2>&1; then
         -output "$TARGET_DIR/libembed_anything_binding.a"
     
     # Copy ONNX Runtime shared library
-    find target -name "libonnxruntime.dylib*" -type f -exec cp {} "$TARGET_DIR/" \;
+    find target -name "libonnxruntime.dylib*" -exec cp {} "$TARGET_DIR/" \;
     echo "✅ Universal library created at $TARGET_DIR/libembed_anything_binding.a"
     lipo -info "$TARGET_DIR/libembed_anything_binding.a"
 else

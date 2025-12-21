@@ -75,10 +75,23 @@ if [ ! -f "$TARGET_DIR/libembed_anything_binding.a" ]; then
         rm "$TEMP_TAR"
     fi
 
-    if [ "$OS" = "Darwin" ]; then
-        echo "💡 You can compile it locally by running: ./scripts/compile_rust_mac.sh"
+    echo "⚠️  Download failed or not attempted."
+    
+    # Check for cargo
+    if command -v cargo >/dev/null 2>&1; then
+        echo "🦀 Cargo found. Attempting to compile locally..."
+        if [ "$OS" = "Darwin" ]; then
+            sh "$SCRIPT_DIR/compile_rust_mac.sh"
+        elif [ "$OS" = "Linux" ]; then
+            sh "$SCRIPT_DIR/compile_rust_linux.sh"
+        else
+             echo "❌ Automatic compilation not supported for $OS"
+             exit 1
+        fi
+        exit 0
     else
-        echo "💡 You can compile it locally by running: ./scripts/compile_rust_linux.sh"
+        echo "❌ Library not found and 'cargo' is not installed."
+        echo "   Please install Rust/Cargo to compile locally, or ensure the binary release is available."
+        exit 1
     fi
-    # exit 1 # Uncomment to fail if download is mandatory
 fi

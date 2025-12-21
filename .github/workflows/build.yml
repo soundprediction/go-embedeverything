@@ -92,7 +92,11 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/pkg/embedder/lib/${{ matrix.target_dir }}
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/pkg/embedder/lib/${{ matrix.target_dir }}
+          ORT_DYLIB_PATH: ${{ github.workspace }}/pkg/embedder/lib/${{ matrix.target_dir }}/libonnxruntime.so
         run: |
+          # Debug: List files to ensure libonnxruntime.so exists
+          ls -R pkg/embedder/lib
+          
           # Ensure link paths are correct for testing
           # The CGO flags in the code already point to the correct relative paths
           go test -v ./pkg/embedder/...

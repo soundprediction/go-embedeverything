@@ -42,7 +42,7 @@ cargo build --release
 cp target/release/libembed_anything_binding.a "$TARGET_DIR/"
 # Copy ONNX Runtime shared library
 # Download and copy ONNX Runtime shared library
-ORT_VERSION="1.19.2"
+ORT_VERSION="1.22.1"
 ORT_ARCH="x64"
 if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
     ORT_ARCH="aarch64"

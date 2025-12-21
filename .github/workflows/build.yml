@@ -44,7 +44,7 @@ jobs:
             target/x86_64-apple-darwin/release/libembed_anything_binding.a \
             -output ../pkg/embedder/lib/darwin/libembed_anything_binding.a
           # Copy ONNX Runtime shared library (try to find dylibs from both targets)
-          find target -name "libonnxruntime.dylib*" -type f -exec cp {} ../pkg/embedder/lib/darwin/ \;
+          find target -name "libonnxruntime.dylib*" -exec cp {} ../pkg/embedder/lib/darwin/ \;
 
       - name: Build Rust (Linux)
         if: matrix.os != 'macos-latest'
@@ -53,8 +53,18 @@ jobs:
           cargo build --release
           mkdir -p ../pkg/embedder/lib/${{ matrix.target_dir }}
           cp target/release/libembed_anything_binding.a ../pkg/embedder/lib/${{ matrix.target_dir }}/
-          # Copy ONNX Runtime shared library
-          find target -name "libonnxruntime.so*" -type f -exec cp {} ../pkg/embedder/lib/${{ matrix.target_dir }}/ \;
+          # Download and copy ONNX Runtime shared library
+          ORT_VERSION="1.22.0"
+          ARCH="x64"
+          if [[ "${{ matrix.arch }}" == "aarch64" ]]; then
+            ARCH="aarch64"
+          fi
+          
+          curl -L "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-${ARCH}-${ORT_VERSION}.tgz" \
+            | tar xz
+            
+          # Copy to target dir (including symlinks)
+          cp -P onnxruntime-linux-${ARCH}-${ORT_VERSION}/lib/libonnxruntime.so* ../pkg/embedder/lib/${{ matrix.target_dir }}/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -92,7 +102,11 @@ jobs:
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/pkg/embedder/lib/${{ matrix.target_dir }}
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/pkg/embedder/lib/${{ matrix.target_dir }}
+          ORT_DYLIB_PATH: ${{ github.workspace }}/pkg/embedder/lib/${{ matrix.target_dir }}/libonnxruntime.so
         run: |
+          # Debug: List files to ensure libonnxruntime.so exists
+          ls -R pkg/embedder/lib
+          
           # Ensure link paths are correct for testing
           # The CGO flags in the code already point to the correct relative paths
           go test -v ./pkg/embedder/...

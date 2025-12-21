@@ -44,7 +44,7 @@ jobs:
             target/x86_64-apple-darwin/release/libembed_anything_binding.a \
             -output ../pkg/embedder/lib/darwin/libembed_anything_binding.a
           # Copy ONNX Runtime shared library (try to find dylibs from both targets)
-          find target -name "libonnxruntime.dylib*" -type f -exec cp {} ../pkg/embedder/lib/darwin/ \;
+          find target -name "libonnxruntime.dylib*" -exec cp {} ../pkg/embedder/lib/darwin/ \;
 
       - name: Build Rust (Linux)
         if: matrix.os != 'macos-latest'
@@ -54,7 +54,7 @@ jobs:
           mkdir -p ../pkg/embedder/lib/${{ matrix.target_dir }}
           cp target/release/libembed_anything_binding.a ../pkg/embedder/lib/${{ matrix.target_dir }}/
           # Copy ONNX Runtime shared library
-          find target -name "libonnxruntime.so*" -type f -exec cp {} ../pkg/embedder/lib/${{ matrix.target_dir }}/ \;
+          find target -name "libonnxruntime.so*" -exec cp {} ../pkg/embedder/lib/${{ matrix.target_dir }}/ \;
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

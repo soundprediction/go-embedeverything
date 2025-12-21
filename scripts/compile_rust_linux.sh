@@ -41,6 +41,6 @@ cargo build --release
 # Copy the static library
 cp target/release/libembed_anything_binding.a "$TARGET_DIR/"
 # Copy ONNX Runtime shared library
-find target -name "libonnxruntime.so*" -type f -exec cp {} "$TARGET_DIR/" \;
+find target -name "libonnxruntime.so*" -exec cp {} "$TARGET_DIR/" \;
 
 echo "✅ Library compiled and copied to $TARGET_DIR"

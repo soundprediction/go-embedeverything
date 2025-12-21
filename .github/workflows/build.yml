@@ -54,7 +54,7 @@ jobs:
           mkdir -p ../pkg/embedder/lib/${{ matrix.target_dir }}
           cp target/release/libembed_anything_binding.a ../pkg/embedder/lib/${{ matrix.target_dir }}/
           # Download and copy ONNX Runtime shared library
-          ORT_VERSION="1.22.1"
+          ORT_VERSION="1.22.0"
           ARCH="x64"
           if [[ "${{ matrix.arch }}" == "aarch64" ]]; then
             ARCH="aarch64"

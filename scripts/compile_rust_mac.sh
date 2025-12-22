@@ -4,6 +4,8 @@
 
 set -e
 
+export MACOSX_DEPLOYMENT_TARGET=26.0
+
 # Get the directory of the script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"

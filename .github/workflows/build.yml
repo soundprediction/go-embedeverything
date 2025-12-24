@@ -34,37 +34,11 @@ jobs:
 
       - name: Build Rust (macOS Universal)
         if: matrix.os == 'macos-latest'
-        run: |
-          cd embed_anything_binding
-          cargo build --release --target aarch64-apple-darwin
-          cargo build --release --target x86_64-apple-darwin
-          mkdir -p ../pkg/embedder/lib/darwin
-          lipo -create \
-            target/aarch64-apple-darwin/release/libembed_anything_binding.a \
-            target/x86_64-apple-darwin/release/libembed_anything_binding.a \
-            -output ../pkg/embedder/lib/darwin/libembed_anything_binding.a
-          # Copy ONNX Runtime shared library (try to find dylibs from both targets)
-          find target -name "libonnxruntime.dylib*" -exec cp {} ../pkg/embedder/lib/darwin/ \;
+        run: bash scripts/compile_rust_mac.sh
 
       - name: Build Rust (Linux)
         if: matrix.os != 'macos-latest'
-        run: |
-          cd embed_anything_binding
-          cargo build --release
-          mkdir -p ../pkg/embedder/lib/${{ matrix.target_dir }}
-          cp target/release/libembed_anything_binding.a ../pkg/embedder/lib/${{ matrix.target_dir }}/
-          # Download and copy ONNX Runtime shared library
-          ORT_VERSION="1.22.0"
-          ARCH="x64"
-          if [[ "${{ matrix.arch }}" == "aarch64" ]]; then
-            ARCH="aarch64"
-          fi
-          
-          curl -L "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-${ARCH}-${ORT_VERSION}.tgz" \
-            | tar xz
-            
-          # Copy to target dir (including symlinks)
-          cp -P onnxruntime-linux-${ARCH}-${ORT_VERSION}/lib/libonnxruntime.so* ../pkg/embedder/lib/${{ matrix.target_dir }}/
+        run: bash scripts/compile_rust_linux.sh
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -99,16 +73,7 @@ jobs:
           path: pkg/embedder/lib/${{ matrix.target_dir }}
 
       - name: Run Go Tests
-        env:
-          LD_LIBRARY_PATH: ${{ github.workspace }}/pkg/embedder/lib/${{ matrix.target_dir }}
-          DYLD_LIBRARY_PATH: ${{ github.workspace }}/pkg/embedder/lib/${{ matrix.target_dir }}
-          ORT_DYLIB_PATH: ${{ github.workspace }}/pkg/embedder/lib/${{ matrix.target_dir }}/libonnxruntime.so
         run: |
-          # Debug: List files to ensure libonnxruntime.so exists
-          ls -R pkg/embedder/lib
-          
-          # Ensure link paths are correct for testing
-          # The CGO flags in the code already point to the correct relative paths
           go test -v ./pkg/embedder/...
 
   release:
@@ -127,20 +92,24 @@ jobs:
       - name: Prepare Release Assets
         run: |
           mkdir assets
-          # macOS
-          mv artifacts/lib-darwin/libembed_anything_binding.a assets/libembed_anything_binding-darwin-universal.a
-          # Linux AMD64
-          mv artifacts/lib-linux-amd64/libembed_anything_binding.a assets/libembed_anything_binding-linux-x86_64.a
-          # Linux ARM64
-          mv artifacts/lib-linux-arm64/libembed_anything_binding.a assets/libembed_anything_binding-linux-aarch64.a
+          # Copy all compressed libs to assets for release
+          cp artifacts/lib-darwin/*.gz assets/
+          cp artifacts/lib-linux-amd64/*.gz assets/
+          cp artifacts/lib-linux-arm64/*.gz assets/
+          # No renaming needed, they are platform specific in their names?
+          # Wait, in artifacts they are libembed_anything_binding.so.gz
+          # We should rename to avoid collision!
           
-          # Create tarballs for each
-          cd assets
-          for f in *.a; do
-            tar -czvf "${f%.a}.tar.gz" "$f"
-          done
+          mv artifacts/lib-darwin/libembed_anything_binding.dylib.gz assets/libembed_anything_binding-darwin-universal.dylib.gz
+          mv artifacts/lib-darwin/libonnxruntime.dylib.gz assets/libonnxruntime-darwin-universal.dylib.gz
+          
+          mv artifacts/lib-linux-amd64/libembed_anything_binding.so.gz assets/libembed_anything_binding-linux-x86_64.so.gz
+          mv artifacts/lib-linux-amd64/libonnxruntime.so.gz assets/libonnxruntime-linux-x86_64.so.gz
+          
+          mv artifacts/lib-linux-arm64/libembed_anything_binding.so.gz assets/libembed_anything_binding-linux-aarch64.so.gz
+          mv artifacts/lib-linux-arm64/libonnxruntime.so.gz assets/libonnxruntime-linux-aarch64.so.gz
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: assets/*.tar.gz
+          files: assets/*.gz

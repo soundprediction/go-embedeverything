@@ -31,24 +31,25 @@ else
 fi
 
 echo "🍎 Building for Apple Silicon (arm64)..."
-cargo build --release --target aarch64-apple-darwin
+cargo build --release --target aarch64-apple-darwin --features metal
 
 echo "💻 Building for Intel (x86_64)..."
-cargo build --release --target x86_64-apple-darwin
+cargo build --release --target x86_64-apple-darwin --features metal
 
 if command -v lipo >/dev/null 2>&1; then
     echo "🚀 Creating Universal Binary using lipo..."
     lipo -create \
-        target/aarch64-apple-darwin/release/libembed_anything_binding.a \
-        target/x86_64-apple-darwin/release/libembed_anything_binding.a \
-        -output "$TARGET_DIR/libembed_anything_binding.a"
+        target/aarch64-apple-darwin/release/libembed_anything_binding.dylib \
+        target/x86_64-apple-darwin/release/libembed_anything_binding.dylib \
+        -output "$TARGET_DIR/libembed_anything_binding.dylib"
     
-    # Copy ONNX Runtime shared library
-    find target -name "libonnxruntime.dylib*" -type f -exec cp {} "$TARGET_DIR/" \;
-    echo "✅ Universal library created at $TARGET_DIR/libembed_anything_binding.a"
-    lipo -info "$TARGET_DIR/libembed_anything_binding.a"
+    # Compress
+    gzip -9 -f "$TARGET_DIR/libembed_anything_binding.dylib"
+
+    echo "✅ Universal library created at $TARGET_DIR/libembed_anything_binding.dylib.gz"
 else
     echo "❌ lipo not found. Unable to create universal binary."
-    echo "Falling back to host architecture only..."
-    cp target/release/libembed_anything_binding.a "$TARGET_DIR/"
+    # Just copy what we have (host)
+    cp target/release/libembed_anything_binding.dylib "$TARGET_DIR/"
+    gzip -9 -f "$TARGET_DIR/libembed_anything_binding.dylib"
 fi

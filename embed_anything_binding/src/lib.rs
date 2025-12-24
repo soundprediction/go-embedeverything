@@ -1,8 +1,25 @@
-use libc::{c_char, c_float, size_t};
+use libc::{c_char, c_float, size_t, c_int};
 use std::ffi::CStr;
 use embed_anything::embeddings::embed::Embedder;
 use embed_anything::reranker::model::Reranker;
 use tokio::runtime::Runtime;
+
+#[no_mangle]
+pub extern "C" fn init_onnx_runtime(path: *const c_char) -> c_int {
+    let p = unsafe { CStr::from_ptr(path).to_str() };
+    match p {
+        Ok(path_str) => {
+             match ort::init_from(path_str).commit() {
+                 Ok(_) => 0,
+                 Err(e) => {
+                     eprintln!("ORT init error: {:?}", e);
+                     1
+                 }
+             }
+        },
+        Err(_) => 1
+    }
+}
 
 pub struct EmbedderWrapper {
     pub inner: Embedder,

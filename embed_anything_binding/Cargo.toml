@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["cdylib"]
 
 [features]
 default = []
@@ -17,3 +17,10 @@ anyhow = "1.0.100"
 embed_anything = { version = "0.6.5", features = ["ort"] }
 libc = "0.2.178"
 tokio = { version = "1.48.0", features = ["rt", "macros", "rt-multi-thread"] }
+ort = { version = "2.0.0-rc.10", features = ["load-dynamic"] }
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"

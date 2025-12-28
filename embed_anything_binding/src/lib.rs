@@ -66,7 +66,7 @@ pub extern "C" fn new_embedder(model_id: *const c_char, architecture: *const c_c
         Err(_) => return std::ptr::null_mut(),
     };
 
-    match Embedder::from_pretrained_hf(&arch, &m_id, None, None, None) {
+    match Embedder::from_pretrained_hf(&m_id, None, None, None) {
         Ok(e) => Box::into_raw(Box::new(EmbedderWrapper { inner: e, runtime })),
         Err(e) => {
             eprintln!("Error creating embedder: {:?}", e);

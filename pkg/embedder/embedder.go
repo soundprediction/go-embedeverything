@@ -39,61 +39,61 @@ typedef struct {
 } BatchRerankResult;
 
 // Helper to dlopen
-void* open_lib(const char* path) {
+void* _ee_open_lib(const char* path) {
     return dlopen(path, RTLD_LAZY | RTLD_GLOBAL); // RTLD_GLOBAL needed for ort?
 }
 
-char* get_dlerror() {
+char* _ee_get_dlerror() {
     return dlerror();
 }
 
-void* get_sym(void* handle, const char* name) {
+void* _ee_get_sym(void* handle, const char* name) {
     return dlsym(handle, name);
 }
 
 // Function pointer typedefs and callers
 typedef int (*init_onnx_runtime_t)(const char*);
-int call_init_onnx_runtime(void* f, const char* path) {
+int _ee_call_init_onnx_runtime(void* f, const char* path) {
     return ((init_onnx_runtime_t)f)(path);
 }
 
 typedef EmbedderWrapper* (*new_embedder_t)(const char*, const char*);
-EmbedderWrapper* call_new_embedder(void* f, const char* m, const char* a) {
+EmbedderWrapper* _ee_call_new_embedder(void* f, const char* m, const char* a) {
     return ((new_embedder_t)f)(m, a);
 }
 
 typedef BatchEmbeddingResult* (*embed_text_batch_t)(EmbedderWrapper*, const char**, size_t);
-BatchEmbeddingResult* call_embed_text_batch(void* f, EmbedderWrapper* w, const char** t, size_t c) {
+BatchEmbeddingResult* _ee_call_embed_text_batch(void* f, EmbedderWrapper* w, const char** t, size_t c) {
     return ((embed_text_batch_t)f)(w, t, c);
 }
 
 typedef void (*free_embedder_t)(EmbedderWrapper*);
-void call_free_embedder(void* f, EmbedderWrapper* w) {
+void _ee_call_free_embedder(void* f, EmbedderWrapper* w) {
     ((free_embedder_t)f)(w);
 }
 
 typedef void (*free_batch_result_t)(BatchEmbeddingResult*);
-void call_free_batch_result(void* f, BatchEmbeddingResult* r) {
+void _ee_call_free_batch_result(void* f, BatchEmbeddingResult* r) {
     ((free_batch_result_t)f)(r);
 }
 
 typedef RerankerWrapper* (*new_reranker_t)(const char*);
-RerankerWrapper* call_new_reranker(void* f, const char* m) {
+RerankerWrapper* _ee_call_new_reranker(void* f, const char* m) {
     return ((new_reranker_t)f)(m);
 }
 
 typedef BatchRerankResult* (*rerank_documents_t)(RerankerWrapper*, const char*, const char**, size_t);
-BatchRerankResult* call_rerank_documents(void* f, RerankerWrapper* w, const char* q, const char** d, size_t c) {
+BatchRerankResult* _ee_call_rerank_documents(void* f, RerankerWrapper* w, const char* q, const char** d, size_t c) {
     return ((rerank_documents_t)f)(w, q, d, c);
 }
 
 typedef void (*free_reranker_t)(RerankerWrapper*);
-void call_free_reranker(void* f, RerankerWrapper* w) {
+void _ee_call_free_reranker(void* f, RerankerWrapper* w) {
     ((free_reranker_t)f)(w);
 }
 
 typedef void (*free_rerank_result_t)(BatchRerankResult*);
-void call_free_rerank_result(void* f, BatchRerankResult* r) {
+void _ee_call_free_rerank_result(void* f, BatchRerankResult* r) {
     ((free_rerank_result_t)f)(r);
 }
 
@@ -213,9 +213,9 @@ func Init() error {
 	// DLOPEN Binding Lib
 	cBindingPath := C.CString(bindingDest)
 	defer C.free(unsafe.Pointer(cBindingPath))
-	dlHandle = C.open_lib(cBindingPath)
+	dlHandle = C._ee_open_lib(cBindingPath)
 	if dlHandle == nil {
-		cErr := C.get_dlerror()
+		cErr := C._ee_get_dlerror()
 		return fmt.Errorf("dlopen failed: %s", C.GoString(cErr))
 	}
 
@@ -223,7 +223,7 @@ func Init() error {
 	loadSym := func(name string) (unsafe.Pointer, error) {
 		cName := C.CString(name)
 		defer C.free(unsafe.Pointer(cName))
-		sym := C.get_sym(dlHandle, cName)
+		sym := C._ee_get_sym(dlHandle, cName)
 		if sym == nil {
 			return nil, fmt.Errorf("symbol not found: %s", name)
 		}
@@ -261,7 +261,7 @@ func Init() error {
 	// Init ORT
 	cORTPath := C.CString(ortDest)
 	defer C.free(unsafe.Pointer(cORTPath))
-	ret := C.call_init_onnx_runtime(fnInitOnnxRuntime, cORTPath)
+	ret := C._ee_call_init_onnx_runtime(fnInitOnnxRuntime, cORTPath)
 	if ret != 0 {
 		return fmt.Errorf("init_onnx_runtime failed")
 	}
@@ -292,7 +292,7 @@ func NewEmbedder(modelID string) (*Embedder, error) {
 	defer C.free(unsafe.Pointer(cModelID))
 	defer C.free(unsafe.Pointer(cArch))
 
-	ptr := C.call_new_embedder(fnNewEmbedder, cModelID, cArch)
+	ptr := C._ee_call_new_embedder(fnNewEmbedder, cModelID, cArch)
 	if ptr == nil {
 		return nil, errors.New("failed to create embedder")
 	}
@@ -325,7 +325,7 @@ func inferArchitecture(modelID string) string {
 // Close
 func (e *Embedder) Close() {
 	if e.ptr != nil {
-		C.call_free_embedder(fnFreeEmbedder, e.ptr)
+		C._ee_call_free_embedder(fnFreeEmbedder, e.ptr)
 		e.ptr = nil
 	}
 }
@@ -365,11 +365,11 @@ func (e *Embedder) Embed(input interface{}) ([][]float32, error) {
 		cArray[i] = cStr
 	}
 
-	res := C.call_embed_text_batch(fnEmbedTextBatch, e.ptr, (**C.char)(unsafe.Pointer(&cArray[0])), C.size_t(len(texts)))
+	res := C._ee_call_embed_text_batch(fnEmbedTextBatch, e.ptr, (**C.char)(unsafe.Pointer(&cArray[0])), C.size_t(len(texts)))
 	if res == nil {
 		return nil, errors.New("failed to generate embeddings")
 	}
-	defer C.call_free_batch_result(fnFreeBatchResult, res)
+	defer C._ee_call_free_batch_result(fnFreeBatchResult, res)
 
 	count := int(res.count)
 	vectors := unsafe.Slice(res.vectors, count)
@@ -403,7 +403,7 @@ func NewReranker(modelID string) (*Reranker, error) {
 	cModelID := C.CString(modelID)
 	defer C.free(unsafe.Pointer(cModelID))
 
-	ptr := C.call_new_reranker(fnNewReranker, cModelID)
+	ptr := C._ee_call_new_reranker(fnNewReranker, cModelID)
 	if ptr == nil {
 		return nil, errors.New("failed to create reranker")
 	}
@@ -413,7 +413,7 @@ func NewReranker(modelID string) (*Reranker, error) {
 // Close
 func (r *Reranker) Close() {
 	if r.ptr != nil {
-		C.call_free_reranker(fnFreeReranker, r.ptr)
+		C._ee_call_free_reranker(fnFreeReranker, r.ptr)
 		r.ptr = nil
 	}
 }
@@ -443,11 +443,11 @@ func (r *Reranker) Rerank(query string, documents []string) ([]RerankResult, err
 		cDocs[i] = cStr
 	}
 
-	res := C.call_rerank_documents(fnRerankDocuments, r.ptr, cQuery, (**C.char)(unsafe.Pointer(&cDocs[0])), C.size_t(len(documents)))
+	res := C._ee_call_rerank_documents(fnRerankDocuments, r.ptr, cQuery, (**C.char)(unsafe.Pointer(&cDocs[0])), C.size_t(len(documents)))
 	if res == nil {
 		return nil, errors.New("failed to rerank documents")
 	}
-	defer C.call_free_rerank_result(fnFreeRerankResult, res)
+	defer C._ee_call_free_rerank_result(fnFreeRerankResult, res)
 
 	count := int(res.count)
 	results := unsafe.Slice(res.results, count)
